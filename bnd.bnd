@@ -1,0 +1,13 @@
+Bundle-SymbolicName: com.example.custom.csp.filter
+Bundle-Name: Custom CSP Filter
+Bundle-Version: 1.0.0
+Export-Package: com.example.custom.csp.filter
+
+Import-Package: \
+	com.liferay.portal.kernel.log;version="[1.0.0,2.0.0)",\
+	com.liferay.portal.kernel.util;version="[1.0.0,2.0.0)",\
+	com.liferay.portal.servlet.filters;version="[1.0.0,2.0.0)",\
+	jakarta.servlet;version="[6.0.0,7.0.0)",\
+	jakarta.servlet.http;version="[6.0.0,7.0.0)",\
+	org.osgi.service.component.annotations;version="[1.3.0,2.0.0)",\
+	*;resolution:=optional
