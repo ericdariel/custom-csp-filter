@@ -1,12 +1,11 @@
 package com.example.custom.csp.filter;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.*;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpServletResponseWrapper;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -16,6 +15,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for CustomContentSecurityPolicyFilter
@@ -28,16 +29,13 @@ class CustomContentSecurityPolicyFilterTest {
 	private HttpServletRequest mockRequest;
 
 	@Mock
-	private HttpServletResponse mockResponse;
-
-	@Mock
 	private FilterChain mockFilterChain;
 
-	private CustomContentSecurityPolicyFilter filter;
+	private CustomContentSecurityPolicyFilterTestHelper filter;
 
 	@BeforeEach
 	void setUp() {
-		filter = new CustomContentSecurityPolicyFilter();
+		filter = new CustomContentSecurityPolicyFilterTestHelper();
 	}
 
 	@Test
@@ -45,16 +43,18 @@ class CustomContentSecurityPolicyFilterTest {
 	void testModifyCspHeaderForPartnerportalDomain() throws Exception {
 		// Arrange
 		when(mockRequest.getServerName()).thenReturn("partnerportal.example.com");
-		when(mockResponse.getHeader("Content-Security-Policy"))
-			.thenReturn("script-src 'nonce-ABC123def456'; style-src 'nonce-XYZ789'");
+		
+		TestHttpServletResponseWrapper response = new TestHttpServletResponseWrapper();
+		response.setHeader("Content-Security-Policy", "script-src 'nonce-ABC123def456'; style-src 'nonce-XYZ789'");
 
 		// Act
-		filter.doFilter(mockRequest, mockResponse, mockFilterChain);
+		filter.processFilterPublic(mockRequest, response, mockFilterChain);
 
 		// Assert
-		verify(mockResponse).setHeader(
-			eq("Content-Security-Policy"),
-			contains("unsafe-inline"));
+		String cspHeader = response.getHeader("Content-Security-Policy");
+		assertThat(cspHeader)
+			.contains("unsafe-inline")
+			.doesNotContain("nonce-");
 	}
 
 	@Test
@@ -62,16 +62,17 @@ class CustomContentSecurityPolicyFilterTest {
 	void testDoNotModifyCspHeaderForNonPartnerportalDomain() throws Exception {
 		// Arrange
 		when(mockRequest.getServerName()).thenReturn("www.example.com");
-		when(mockResponse.getHeader("Content-Security-Policy"))
-			.thenReturn("script-src 'nonce-ABC123def456'");
+		
+		String originalCsp = "script-src 'nonce-ABC123def456'";
+		TestHttpServletResponseWrapper response = new TestHttpServletResponseWrapper();
+		response.setHeader("Content-Security-Policy", originalCsp);
 
 		// Act
-		filter.doFilter(mockRequest, mockResponse, mockFilterChain);
+		filter.processFilterPublic(mockRequest, response, mockFilterChain);
 
 		// Assert
-		verify(mockResponse, never()).setHeader(
-			eq("Content-Security-Policy"),
-			anyString());
+		String cspHeader = response.getHeader("Content-Security-Policy");
+		assertThat(cspHeader).isEqualTo(originalCsp);
 	}
 
 	@ParameterizedTest
@@ -84,16 +85,16 @@ class CustomContentSecurityPolicyFilterTest {
 	void testModifyCspForVariousPartnerportalDomains(String domain) throws Exception {
 		// Arrange
 		when(mockRequest.getServerName()).thenReturn(domain);
-		when(mockResponse.getHeader("Content-Security-Policy"))
-			.thenReturn("script-src 'nonce-TEST123'");
+		
+		TestHttpServletResponseWrapper response = new TestHttpServletResponseWrapper();
+		response.setHeader("Content-Security-Policy", "script-src 'nonce-TEST123'");
 
 		// Act
-		filter.doFilter(mockRequest, mockResponse, mockFilterChain);
+		filter.processFilterPublic(mockRequest, response, mockFilterChain);
 
 		// Assert
-		verify(mockResponse).setHeader(
-			eq("Content-Security-Policy"),
-			contains("unsafe-inline"));
+		assertThat(response.getHeader("Content-Security-Policy"))
+			.contains("unsafe-inline");
 	}
 
 	@Test
@@ -102,17 +103,18 @@ class CustomContentSecurityPolicyFilterTest {
 		// Arrange
 		String originalCsp = "script-src 'nonce-ABC123def456'; style-src 'nonce-XYZ789qwer'";
 		when(mockRequest.getServerName()).thenReturn("partnerportal.example.com");
-		when(mockResponse.getHeader("Content-Security-Policy"))
-			.thenReturn(originalCsp);
+		
+		TestHttpServletResponseWrapper response = new TestHttpServletResponseWrapper();
+		response.setHeader("Content-Security-Policy", originalCsp);
 
 		// Act
-		filter.doFilter(mockRequest, mockResponse, mockFilterChain);
+		filter.processFilterPublic(mockRequest, response, mockFilterChain);
 
 		// Assert
-		verify(mockResponse).setHeader(
-			eq("Content-Security-Policy"),
-			argThat(header -> 
-				!header.contains("nonce-") && header.contains("unsafe-inline")));
+		String cspHeader = response.getHeader("Content-Security-Policy");
+		assertThat(cspHeader)
+			.doesNotContain("nonce-")
+			.contains("unsafe-inline");
 	}
 
 	@Test
@@ -120,16 +122,16 @@ class CustomContentSecurityPolicyFilterTest {
 	void testModifyCspReportOnlyHeader() throws Exception {
 		// Arrange
 		when(mockRequest.getServerName()).thenReturn("partnerportal.example.com");
-		when(mockResponse.getHeader("Content-Security-Policy-Report-Only"))
-			.thenReturn("script-src 'nonce-ABC123def456'");
+		
+		TestHttpServletResponseWrapper response = new TestHttpServletResponseWrapper();
+		response.setHeader("Content-Security-Policy-Report-Only", "script-src 'nonce-ABC123def456'");
 
 		// Act
-		filter.doFilter(mockRequest, mockResponse, mockFilterChain);
+		filter.processFilterPublic(mockRequest, response, mockFilterChain);
 
 		// Assert
-		verify(mockResponse).setHeader(
-			eq("Content-Security-Policy-Report-Only"),
-			contains("unsafe-inline"));
+		assertThat(response.getHeader("Content-Security-Policy-Report-Only"))
+			.contains("unsafe-inline");
 	}
 
 	@Test
@@ -137,12 +139,11 @@ class CustomContentSecurityPolicyFilterTest {
 	void testHandleNullCspHeader() throws Exception {
 		// Arrange
 		when(mockRequest.getServerName()).thenReturn("partnerportal.example.com");
-		when(mockResponse.getHeader("Content-Security-Policy"))
-			.thenReturn(null);
+		TestHttpServletResponseWrapper response = new TestHttpServletResponseWrapper();
 
 		// Act & Assert
 		assertThatNoException().isThrownBy(() ->
-			filter.doFilter(mockRequest, mockResponse, mockFilterChain));
+			filter.processFilterPublic(mockRequest, response, mockFilterChain));
 	}
 
 	@Test
@@ -150,12 +151,13 @@ class CustomContentSecurityPolicyFilterTest {
 	void testHandleEmptyCspHeader() throws Exception {
 		// Arrange
 		when(mockRequest.getServerName()).thenReturn("partnerportal.example.com");
-		when(mockResponse.getHeader("Content-Security-Policy"))
-			.thenReturn("");
+		
+		TestHttpServletResponseWrapper response = new TestHttpServletResponseWrapper();
+		response.setHeader("Content-Security-Policy", "");
 
 		// Act & Assert
 		assertThatNoException().isThrownBy(() ->
-			filter.doFilter(mockRequest, mockResponse, mockFilterChain));
+			filter.processFilterPublic(mockRequest, response, mockFilterChain));
 	}
 
 	@Test
@@ -163,11 +165,49 @@ class CustomContentSecurityPolicyFilterTest {
 	void testCallNextFilterInChain() throws Exception {
 		// Arrange
 		when(mockRequest.getServerName()).thenReturn("example.com");
+		TestHttpServletResponseWrapper response = new TestHttpServletResponseWrapper();
 
 		// Act
-		filter.doFilter(mockRequest, mockResponse, mockFilterChain);
+		filter.processFilterPublic(mockRequest, response, mockFilterChain);
 
 		// Assert
-		verify(mockFilterChain).doFilter(mockRequest, mockResponse);
+		verify(mockFilterChain).doFilter(mockRequest, response);
+	}
+
+	/**
+	 * Test helper class that exposes processFilter method
+	 */
+	static class CustomContentSecurityPolicyFilterTestHelper extends CustomContentSecurityPolicyFilter {
+		
+		public void processFilterPublic(
+			HttpServletRequest httpServletRequest,
+			HttpServletResponse httpServletResponse,
+			FilterChain filterChain) throws Exception {
+			
+			processFilter(httpServletRequest, httpServletResponse, filterChain);
+		}
+	}
+
+	/**
+	 * Simple response wrapper for testing
+	 */
+	static class TestHttpServletResponseWrapper extends HttpServletResponseWrapper {
+		
+		private java.util.Map<String, String> headers = new java.util.HashMap<>();
+		
+		public TestHttpServletResponseWrapper() {
+			super(new org.springframework.mock.web.MockHttpServletResponse());
+		}
+		
+		@Override
+		public void setHeader(String name, String value) {
+			headers.put(name, value);
+			super.setHeader(name, value);
+		}
+		
+		@Override
+		public String getHeader(String name) {
+			return headers.getOrDefault(name, super.getHeader(name));
+		}
 	}
 }
