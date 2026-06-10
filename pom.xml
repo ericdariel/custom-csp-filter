@@ -10,13 +10,13 @@
 	<packaging>jar</packaging>
 
 	<name>Custom CSP Filter</name>
-	<description>Custom Content Security Policy Filter for partnerportal domain</description>
+	<description>Custom Content Security Policy Filter for partnerportal domain - Liferay 2025.q1</description>
 
 	<properties>
-		<maven.compiler.source>11</maven.compiler.source>
-		<maven.compiler.target>11</maven.compiler.target>
+		<maven.compiler.source>21</maven.compiler.source>
+		<maven.compiler.target>21</maven.compiler.target>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<liferay.version>7.4.13.5</liferay.version>
+		<liferay.version>2025.q1.0</liferay.version>
 	</properties>
 
 	<dependencies>
@@ -32,7 +32,7 @@
 		<dependency>
 			<groupId>com.liferay</groupId>
 			<artifactId>com.liferay.portal.servlet.filters</artifactId>
-			<version>4.0.5</version>
+			<version>5.0.0</version>
 			<scope>provided</scope>
 		</dependency>
 
@@ -61,9 +61,10 @@
 				<artifactId>maven-compiler-plugin</artifactId>
 				<version>3.11.0</version>
 				<configuration>
-					<source>11</source>
-					<target>11</target>
+					<source>21</source>
+					<target>21</target>
 					<encoding>UTF-8</encoding>
+					<release>21</release>
 				</configuration>
 			</plugin>
 

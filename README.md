@@ -9,6 +9,8 @@ Custom Content Security Policy (CSP) Filter module for Liferay 2025.q1 that modi
 - ✅ Replaces nonce values with `unsafe-inline` for those domains
 - ✅ Non-invasive: no modification of Liferay core files
 - ✅ Modular and easy to deploy
+- ✅ Java 21 compatible
+- ✅ Liferay 2025.q1 compatible
 
 ## How it works
 
@@ -44,7 +46,7 @@ custom-csp-filter/
 
 ## Prerequisites
 
-- Java 11+
+- Java 21+
 - Maven 3.6+
 - Liferay 2025.q1 with CSP enabled
 
